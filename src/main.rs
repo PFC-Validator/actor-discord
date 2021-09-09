@@ -1,0 +1,42 @@
+use actix::Actor;
+//use actix_rt::Runtime;
+use actor_discord::connection::{DiscordAPI, DiscordBot};
+use actor_discord::discord::ExampleDiscordActor;
+use actor_discord::GatewayIntents;
+use anyhow::Result;
+use dotenv::dotenv;
+use std::env;
+
+#[actix_rt::main]
+async fn main() -> Result<()> {
+    dotenv().ok();
+    env_logger::init();
+    log::info!("Starting");
+
+    let token = env::var("DISCORD_TOKEN")?;
+    let url = env::var("DISCORD_URL")?;
+    let intents: GatewayIntents = GatewayIntents::GUILDS
+         // | GatewayIntents::GUILD_MESSAGE_TYPING
+        | GatewayIntents::DIRECT_MESSAGES
+        | GatewayIntents::GUILD_MESSAGES
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS
+        | GatewayIntents::DIRECT_MESSAGE_REACTIONS;
+    log::info!("** Intents = {}", intents.bits);
+
+    log::info!("attempting to create websocket");
+    let discord_api = DiscordAPI::create(&token, &url)?;
+    let mut connect = DiscordBot::create(&discord_api, intents).await?;
+    log::info!("attempting to create actor");
+
+    let actor = ExampleDiscordActor::create(&token, &url)?;
+
+    log::info!("attempting to start actor");
+    let _actor_addr = actor.start();
+    log::info!("creating threads");
+
+    let mut _f = connect.start_websocket(); //.await?;
+
+    _f.await?;
+    log::info!("done");
+    Ok(())
+}
