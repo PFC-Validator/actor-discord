@@ -2,6 +2,7 @@ use actix::Actor;
 //use actix_rt::Runtime;
 use actor_discord::connection::{DiscordAPI, DiscordBot};
 use actor_discord::discord::ExampleDiscordActor;
+use actor_discord::types::events::{ChannelType, GuildChannelCreate};
 use actor_discord::GatewayIntents;
 use anyhow::Result;
 use dotenv::dotenv;
@@ -25,18 +26,31 @@ async fn main() -> Result<()> {
 
     log::info!("attempting to create websocket");
     let discord_api = DiscordAPI::create(&token, &url)?;
-    let mut connect = DiscordBot::create(&discord_api, intents).await?;
+    // let mut connect = DiscordBot::create(&discord_api, intents).await?;
     log::info!("attempting to create actor");
 
-    let actor = ExampleDiscordActor::create(&token, &url)?;
+    //let actor = ExampleDiscordActor::create(&token, &url)?;
 
     log::info!("attempting to start actor");
-    let _actor_addr = actor.start();
+    //let _actor_addr = actor.start();
     log::info!("creating threads");
 
-    let mut _f = connect.start_websocket(); //.await?;
-
-    _f.await?;
+    let channels = discord_api.channels("839604684573638696".into()).await?;
+    log::info!("{}", channels.len());
+    let new_channel = discord_api
+        .create_channel(
+            "839604684573638696".into(),
+            GuildChannelCreate::simple(
+                ChannelType::GuildText,
+                "hello",
+                Some("hello there".into()),
+                None,
+            ),
+        )
+        .await?;
+    log::info!("{:#?}", new_channel);
+    //let mut _f = connect.start_websocket(); //.await?;
+    //_f.await?;
     log::info!("done");
     Ok(())
 }

@@ -1,6 +1,7 @@
 use crate::errors::ActorDiscordError;
 use crate::types::events::{
-    ChannelEvent, Event, Guild, GuildChannel, GuildCreate, MessageEvent, MessageObject, SnowflakeID,
+    ChannelEvent, Event, Guild, GuildChannel, GuildChannelCreate, GuildCreate, MessageEvent,
+    MessageObject, SnowflakeID,
 };
 use crate::types::gateway::{GatewayHello, GatewayIdentify, GatewayMessage, GatewayReply};
 use crate::{types::gateway, GatewayIntents};
@@ -49,9 +50,47 @@ impl DiscordAPI {
         let mut response = self
             .client
             .get(full_url.as_str())
-            .insert_header(("User-Agent", "PFC-Discord"))
-            .insert_header(("Authorization", format!("Bot {}", self.token)))
+            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+            .insert_header((
+                awc::http::header::AUTHORIZATION,
+                format!("Bot {}", self.token),
+            ))
             .send()
+            .await
+            .map_err(|source| {
+                eprintln!("{:#?}", source);
+                ActorDiscordError::ResponseError()
+            })?;
+        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
+            Ok(response.json::<T>().limit(1024 * 1024).await?)
+        } else {
+            log::error!(
+                "{} {}",
+                response.status(),
+                std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
+            );
+            Err(ActorDiscordError::ResponseError().into())
+        }
+    }
+    pub async fn post<T: for<'de> Deserialize<'de>>(
+        &self,
+        url_suffix: &str,
+        args: serde_json::Value,
+    ) -> anyhow::Result<T> {
+        let full_url = self.base_url.join(url_suffix)?;
+        log::info!("URL={}", full_url.as_str());
+        let arg_json = serde_json::to_string(&args)?;
+        let mut response = self
+            .client
+            .post(full_url.as_str())
+            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+            .insert_header((
+                awc::http::header::AUTHORIZATION,
+                format!("Bot {}", self.token),
+            ))
+            .send_body(arg_json)
             .await
             .map_err(|source| {
                 eprintln!("{:#?}", source);
@@ -73,6 +112,22 @@ impl DiscordAPI {
         let url = self.base_url.join(GUILD_ID)?.join(&id.to_string())?;
         let guild: Guild = self.get(url.as_str()).await?;
         Ok(guild)
+    }
+    pub async fn channels(&self, guild_id: SnowflakeID) -> Result<Vec<GuildChannel>> {
+        let prefix = format!("{}{}/channels", GUILD_ID, guild_id.to_string());
+        let url = self.base_url.join(&prefix)?;
+        let channels: Vec<GuildChannel> = self.get(url.as_str()).await?;
+        Ok(channels)
+    }
+    pub async fn create_channel(
+        &self,
+        guild_id: SnowflakeID,
+        channel_details: GuildChannelCreate,
+    ) -> Result<GuildChannel> {
+        let prefix = format!("{}{}/channels", GUILD_ID, guild_id.to_string());
+        //   let url = self.base_url.join(&prefix)?;
+        self.post(&prefix, serde_json::to_value(&channel_details)?)
+            .await
     }
 }
 pub struct DiscordBot<'a> {

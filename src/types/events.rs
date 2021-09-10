@@ -24,7 +24,7 @@ pub enum ChannelEvent {
     ChannelDelete(GuildChannel),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SnowflakeID {
     pub id: u64,
 }
@@ -107,6 +107,39 @@ pub struct GuildChannel {
     pub last_message_id: Option<SnowflakeID>,
     pub guild_id: Option<SnowflakeID>,
     pub guild_hashes: Option<GuildHashes>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GuildChannelCreate {
+    #[serde(rename = "type")]
+    pub u_type: ChannelType,
+    pub name: String,
+    pub topic: Option<String>,
+    pub bitrate: Option<usize>,
+    pub user_limit: Option<usize>,
+    pub rate_limit_per_user: usize,
+    pub position: usize,
+    pub parent_id: Option<SnowflakeID>,
+    pub nsfw: bool,
+}
+impl GuildChannelCreate {
+    pub fn simple(
+        u_type: ChannelType,
+        name: &str,
+        topic: Option<String>,
+        parent_id: Option<SnowflakeID>,
+    ) -> Self {
+        GuildChannelCreate {
+            u_type,
+            name: name.into(),
+            topic,
+            bitrate: None,
+            user_limit: None,
+            rate_limit_per_user: 0,
+            position: 0,
+            parent_id,
+            nsfw: false,
+        }
+    }
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Hash {
