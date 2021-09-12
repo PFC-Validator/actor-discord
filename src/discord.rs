@@ -1,6 +1,6 @@
-use crate::connection::DiscordAPI;
 use crate::types::events::{ChannelEvent, Event, MessageEvent};
 use crate::BrokerType;
+use crate::DiscordAPI;
 use actix::{Actor, Context, ContextFutureSpawner, Handler, WrapFuture};
 use actix_broker::BrokerSubscribe;
 use anyhow::Result;

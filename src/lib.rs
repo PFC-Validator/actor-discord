@@ -1,11 +1,12 @@
 use actix_broker::SystemBroker;
 
+mod api;
 pub mod connection;
 pub mod discord;
 mod errors;
 mod intents;
 pub mod types;
-
+pub use api::DiscordAPI;
 pub use intents::GatewayIntents;
 /// VERSION number of package
 pub const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
