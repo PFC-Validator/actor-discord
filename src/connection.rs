@@ -183,7 +183,7 @@ impl DiscordAPI {
         let de_dup: String = RE_DUP.replace_all(&sanitized, "-").to_string();
         let trimmed_start: String = RE_START.replace_all(&de_dup, "").to_string();
         let trimmed_end: String = RE_END.replace_all(&trimmed_start, "").to_string();
-        trimmed_end
+        trimmed_end.to_lowercase()
     }
 }
 pub struct DiscordBot<'a> {
