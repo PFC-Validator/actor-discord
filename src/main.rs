@@ -36,7 +36,22 @@ async fn main() -> Result<()> {
     log::info!("creating threads");
 
     let channels = discord_api.channels("839604684573638696".into()).await?;
+    let foo = channels
+        .iter()
+        .filter(|c| c.parent_id.is_none() && c.u_type == ChannelType::GuildText)
+        .collect::<Vec<_>>();
+    let bb = futures::future::join_all(foo.iter().map(|c| discord_api.delete_channel(c.id))).await;
+    bb.iter().for_each(|cr| match cr {
+        Ok(gc) => {
+            log::info!("{}", gc.id.to_string())
+        }
+        Err(e) => {
+            log::error!("{}", e)
+        }
+    });
+
     log::info!("{}", channels.len());
+    /*
     let new_channel = discord_api
         .create_channel(
             "839604684573638696".into(),
@@ -48,7 +63,9 @@ async fn main() -> Result<()> {
             ),
         )
         .await?;
-    log::info!("{:#?}", new_channel);
+
+     */
+    //    log::info!("{:#?}", new_channel);
     //let mut _f = connect.start_websocket(); //.await?;
     //_f.await?;
     log::info!("done");

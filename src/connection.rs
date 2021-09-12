@@ -14,6 +14,7 @@ use awc::ws::Message;
 use awc::Client;
 use futures::StreamExt;
 use futures_util::sink::SinkExt as _;
+use lazy_static::lazy_static;
 //use futures_util::{sink::SinkExt as _, stream::StreamExt as _};
 use actix_broker::{Broker, SystemBroker};
 use serde::Deserialize;
@@ -22,6 +23,7 @@ use std::sync::Arc;
 use std::time::Duration;
 //use tokio::sync::mpsc;
 //use tokio::sync::watch;
+use regex::Regex;
 use tokio::time::Interval;
 use url::Url;
 
@@ -107,6 +109,40 @@ impl DiscordAPI {
             Err(ActorDiscordError::ResponseError().into())
         }
     }
+    pub async fn delete<T: for<'de> Deserialize<'de>>(
+        &self,
+        url_suffix: &str,
+    ) -> anyhow::Result<T> {
+        let full_url = self.base_url.join(url_suffix)?;
+        log::info!("Delete URL={}", full_url.as_str());
+        //  let arg_json = serde_json::to_string(&args)?;
+        let mut response = self
+            .client
+            .delete(full_url.as_str())
+            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+            .insert_header((
+                awc::http::header::AUTHORIZATION,
+                format!("Bot {}", self.token),
+            ))
+            .send()
+            //  .send_body(arg_json)
+            .await
+            .map_err(|source| {
+                eprintln!("{:#?}", source);
+                ActorDiscordError::ResponseError()
+            })?;
+        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
+            Ok(response.json::<T>().limit(1024 * 1024).await?)
+        } else {
+            log::error!(
+                "{} {}",
+                response.status(),
+                std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
+            );
+            Err(ActorDiscordError::ResponseError().into())
+        }
+    }
 
     pub async fn guild(&self, id: SnowflakeID) -> Result<Guild> {
         let url = self.base_url.join(GUILD_ID)?.join(&id.to_string())?;
@@ -128,6 +164,26 @@ impl DiscordAPI {
         //   let url = self.base_url.join(&prefix)?;
         self.post(&prefix, serde_json::to_value(&channel_details)?)
             .await
+    }
+    pub async fn delete_channel(&self, channel_id: SnowflakeID) -> Result<GuildChannel> {
+        let prefix = format!("channels/{}", channel_id.to_string());
+        //   let url = self.base_url.join(&prefix)?;
+        self.delete(&prefix).await
+    }
+    pub fn sanitize(source: &str) -> String {
+        //  let mut lowercase = source.to_ascii_lowercase();
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"[^\pN\p{Emoji}A-Za-z0-9\-]").unwrap();
+            static ref RE_DUP: Regex = Regex::new(r"-+").unwrap();
+            static ref RE_START: Regex = Regex::new(r"^-").unwrap();
+            static ref RE_END: Regex = Regex::new(r"-$").unwrap();
+        }
+
+        let sanitized = RE.replace_all(source, "-").to_string();
+        let de_dup: String = RE_DUP.replace_all(&sanitized, "-").to_string();
+        let trimmed_start: String = RE_START.replace_all(&de_dup, "").to_string();
+        let trimmed_end: String = RE_END.replace_all(&trimmed_start, "").to_string();
+        trimmed_end
     }
 }
 pub struct DiscordBot<'a> {

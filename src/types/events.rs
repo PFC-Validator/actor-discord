@@ -80,7 +80,7 @@ pub struct Guild {
     pub name: Option<String>,
     pub owner_id: SnowflakeID,
 }
-#[derive(Debug, Clone, Deserialize_repr, Serialize_repr)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
 #[repr(u8)]
 pub enum ChannelType {
     GuildText = 0,
