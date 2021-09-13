@@ -1,11 +1,16 @@
 use anyhow::Result;
 use awc::http::StatusCode;
 //use awc::{ws, Client, ClientBuilder};
-use awc::Client;
+use awc::{Client, ClientResponse};
 use lazy_static::lazy_static;
 //use futures_util::{sink::SinkExt as _, stream::StreamExt as _};
 use crate::errors::ActorDiscordError;
-use crate::types::events::{Guild, GuildChannel, GuildChannelCreate, SnowflakeID};
+use crate::types::events::{
+    Guild, GuildChannel, GuildChannelCreate, MessageCreate, MessageObject, RetryMessage,
+    SnowflakeID,
+};
+use actix_http::encoding::Decoder;
+use actix_http::Payload;
 use regex::Regex;
 use serde::Deserialize;
 use std::str::FromStr;
@@ -32,32 +37,33 @@ impl DiscordAPI {
 
     pub async fn get<T: for<'de> Deserialize<'de>>(&self, url_suffix: &str) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
-        log::info!("URL={}", full_url.as_str());
-        let mut response = self
-            .client
-            .get(full_url.as_str())
-            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
-            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
-            .insert_header((
-                awc::http::header::AUTHORIZATION,
-                format!("Bot {}", self.token),
-            ))
-            .send()
-            .await
-            .map_err(|source| {
-                eprintln!("{:#?}", source);
-                ActorDiscordError::ResponseError()
-            })?;
-        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
-            Ok(response.json::<T>().limit(1024 * 1024).await?)
-        } else {
-            log::error!(
-                "{} {}",
-                response.status(),
-                std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
-            );
-            Err(ActorDiscordError::ResponseError().into())
+
+        let mut retries = 4;
+        while retries > 0 {
+            log::debug!("Get URL={}", full_url.as_str());
+            let response = self
+                .client
+                .get(full_url.as_str())
+                .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+                .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+                .insert_header((
+                    awc::http::header::AUTHORIZATION,
+                    format!("Bot {}", self.token),
+                ))
+                .send()
+                .await
+                .map_err(|source| {
+                    eprintln!("{:#?}", source);
+                    ActorDiscordError::ResponseError()
+                })?;
+            let ok_retryable = self.handle_response::<T>(response).await?;
+            if ok_retryable.0 {
+                return Ok(ok_retryable.1.unwrap());
+            }
+            log::debug!("Retrying retries left:{}", retries);
+            retries = retries - 1;
         }
+        Err(ActorDiscordError::RetryError.into())
     }
     pub async fn post<T: for<'de> Deserialize<'de>>(
         &self,
@@ -65,69 +71,135 @@ impl DiscordAPI {
         args: serde_json::Value,
     ) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
-        log::info!("URL={}", full_url.as_str());
-        let arg_json = serde_json::to_string(&args)?;
-        let mut response = self
-            .client
-            .post(full_url.as_str())
-            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
-            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
-            .insert_header((
-                awc::http::header::AUTHORIZATION,
-                format!("Bot {}", self.token),
-            ))
-            .send_body(arg_json)
-            .await
-            .map_err(|source| {
-                eprintln!("{:#?}", source);
-                ActorDiscordError::ResponseError()
-            })?;
-        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
-            Ok(response.json::<T>().limit(1024 * 1024).await?)
-        } else {
-            log::error!(
-                "{} {}",
-                response.status(),
-                std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
-            );
-            Err(ActorDiscordError::ResponseError().into())
+
+        let mut retries = 2;
+        while retries > 0 {
+            log::debug!("Post URL={}", full_url.as_str());
+            let arg_json = serde_json::to_string(&args)?;
+            let response = self
+                .client
+                .post(full_url.as_str())
+                .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+                .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+                .insert_header((
+                    awc::http::header::AUTHORIZATION,
+                    format!("Bot {}", self.token),
+                ))
+                .send_body(arg_json)
+                .await
+                .map_err(|source| {
+                    eprintln!("{:#?}", source);
+                    ActorDiscordError::ResponseError()
+                })?;
+            let ok_retryable = self.handle_response::<T>(response).await?;
+            if ok_retryable.0 {
+                return Ok(ok_retryable.1.unwrap());
+            }
+            log::debug!("Retrying retries left:{}", retries);
+            retries = retries - 1;
         }
+        Err(ActorDiscordError::RetryError.into())
     }
     pub async fn delete<T: for<'de> Deserialize<'de>>(
         &self,
         url_suffix: &str,
     ) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
-        log::info!("Delete URL={}", full_url.as_str());
-        //  let arg_json = serde_json::to_string(&args)?;
-        let mut response = self
-            .client
-            .delete(full_url.as_str())
-            .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
-            .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
-            .insert_header((
-                awc::http::header::AUTHORIZATION,
-                format!("Bot {}", self.token),
-            ))
-            .send()
-            //  .send_body(arg_json)
-            .await
-            .map_err(|source| {
-                eprintln!("{:#?}", source);
-                ActorDiscordError::ResponseError()
-            })?;
-        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
-            Ok(response.json::<T>().limit(1024 * 1024).await?)
-        } else {
-            log::error!(
-                "{} {}",
-                response.status(),
-                std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
-            );
-            Err(ActorDiscordError::ResponseError().into())
+
+        let mut retries = 2;
+        while retries > 0 {
+            log::debug!("Delete URL={}", full_url.as_str());
+
+            let response = self
+                .client
+                .delete(full_url.as_str())
+                .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+                .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+                .insert_header((
+                    awc::http::header::AUTHORIZATION,
+                    format!("Bot {}", self.token),
+                ))
+                .send()
+                .await
+                .map_err(|source| {
+                    eprintln!("{:#?}", source);
+                    ActorDiscordError::ResponseError()
+                })?;
+            let ok_retryable = self.handle_response::<T>(response).await?;
+            if ok_retryable.0 {
+                return Ok(ok_retryable.1.unwrap());
+            }
+            log::debug!("Retrying retries left:{}", retries);
+            retries = retries - 1;
         }
+        Err(ActorDiscordError::RetryError.into())
+    }
+    pub async fn patch<T: for<'de> Deserialize<'de>>(
+        &self,
+        url_suffix: &str,
+        args: serde_json::Value,
+    ) -> anyhow::Result<T> {
+        let full_url = self.base_url.join(url_suffix)?;
+
+        let mut retries = 2;
+        while retries > 0 {
+            log::debug!("Patch URL={}", full_url.as_str());
+            let arg_json = serde_json::to_string(&args)?;
+            let response = self
+                .client
+                .patch(full_url.as_str())
+                .insert_header((awc::http::header::CONTENT_TYPE, "application/json"))
+                .insert_header((awc::http::header::USER_AGENT, "PFC-Discord"))
+                .insert_header((
+                    awc::http::header::AUTHORIZATION,
+                    format!("Bot {}", self.token),
+                ))
+                .send_body(arg_json)
+                .await
+                .map_err(|source| {
+                    eprintln!("{:#?}", source);
+                    ActorDiscordError::ResponseError()
+                })?;
+            let ok_retryable = self.handle_response::<T>(response).await?;
+            if ok_retryable.0 {
+                return Ok(ok_retryable.1.unwrap());
+            }
+            log::debug!("Retrying retries left:{}", retries);
+            retries = retries - 1;
+        }
+        Err(ActorDiscordError::RetryError.into())
     }
 
+    /**
+     check response code, sleeping if required.
+       @returns ok=true/retry=false , or Error
+    if OK returns 'T' as 2nd parameter
+    */
+    async fn handle_response<T: for<'de> Deserialize<'de>>(
+        &self,
+        mut response: ClientResponse<Decoder<Payload>>,
+    ) -> Result<(bool, Option<T>)> {
+        if response.status() == StatusCode::CREATED || response.status() == StatusCode::OK {
+            let result: T = response.json::<T>().limit(1024 * 1024).await?;
+            return Ok((true, Some(result)));
+        }
+        if response.status() == StatusCode::TOO_MANY_REQUESTS {
+            let retry: RetryMessage = response.json::<RetryMessage>().await?;
+            log::debug!(
+                "Sleeping for {} seconds :{}",
+                retry.retry_after,
+                retry.message
+            );
+            tokio::time::sleep(tokio::time::Duration::from_secs_f64(retry.retry_after)).await;
+            return Ok((false, None));
+        }
+        log::error!(
+            "{} {}",
+            response.status(),
+            std::str::from_utf8(&response.body().limit(6000).await.unwrap())?
+        );
+        Err(ActorDiscordError::ResponseError().into())
+    }
     pub async fn guild(&self, id: SnowflakeID) -> Result<Guild> {
         let url = self.base_url.join(GUILD_ID)?.join(&id.to_string())?;
         let guild: Guild = self.get(url.as_str()).await?;
@@ -154,6 +226,15 @@ impl DiscordAPI {
         //   let url = self.base_url.join(&prefix)?;
         self.delete(&prefix).await
     }
+    pub async fn patch_channel(
+        &self,
+        channel_id: SnowflakeID,
+        args: serde_json::Value,
+    ) -> Result<GuildChannel> {
+        let prefix = format!("channels/{}", channel_id.to_string());
+        //   let url = self.base_url.join(&prefix)?;
+        self.patch(&prefix, args).await
+    }
     pub fn sanitize(source: &str) -> String {
         //  let mut lowercase = source.to_ascii_lowercase();
         lazy_static! {
@@ -170,6 +251,16 @@ impl DiscordAPI {
         let trimmed_start: String = RE_START.replace_all(&de_dup, "").to_string();
         let trimmed_end: String = RE_END.replace_all(&trimmed_start, "").to_string();
         trimmed_end.to_lowercase()
+    }
+    pub async fn create_message(
+        &self,
+        channel_id: SnowflakeID,
+        message: MessageCreate,
+    ) -> Result<MessageObject> {
+        let prefix = format!("channels/{}/messages", channel_id.to_string());
+        //   let url = self.base_url.join(&prefix)?;
+        let args = serde_json::to_value(message)?;
+        self.post(&prefix, args).await
     }
 }
 #[cfg(test)]

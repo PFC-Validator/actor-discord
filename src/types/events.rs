@@ -217,3 +217,44 @@ pub struct UserObject {
     pub flags: Option<u64>,
     pub public_flags: Option<u64>,
 }
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Embed {
+    pub title: Option<String>,
+    pub description: Option<String>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MessageCreate {
+    pub content: String,
+    pub tts: bool,
+    pub embeds: Vec<Embed>,
+}
+impl MessageCreate {
+    pub fn simple(content: String) -> MessageCreate {
+        MessageCreate {
+            content,
+            tts: false,
+            embeds: Default::default(),
+        }
+    }
+    pub fn markdown(content: String, markdown: &Option<String>) -> MessageCreate {
+        if markdown.is_some() {
+            let embed = Embed {
+                title: None,
+                description: markdown.clone(),
+            };
+            MessageCreate {
+                content,
+                tts: false,
+                embeds: vec![embed],
+            }
+        } else {
+            MessageCreate::simple(content)
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RetryMessage {
+    pub global: bool,
+    pub message: String,
+    pub retry_after: f64,
+}
