@@ -79,7 +79,7 @@ impl<'a> DiscordBot<'a> {
             }
             "READY" => {
                 // TODO log session id for resumes
-                log::info!("READY\n{}", gateway_message)
+                log::debug!("READY\n{}", gateway_message)
             }
             "MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" => {
                 // log::info!("{}\n{}", event_name, gateway_message);
@@ -101,9 +101,9 @@ impl<'a> DiscordBot<'a> {
                 let event = if event_name == "CHANNEL_CREATE" {
                     ChannelEvent::ChannelCreate(gc)
                 } else if event_name == "CHANNEL_DELETE" {
-                    ChannelEvent::ChannelUpdate(gc)
-                } else {
                     ChannelEvent::ChannelDelete(gc)
+                } else {
+                    ChannelEvent::ChannelUpdate(gc)
                 };
                 Broker::<SystemBroker>::issue_async(event);
             }

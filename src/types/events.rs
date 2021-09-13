@@ -24,7 +24,7 @@ pub enum ChannelEvent {
     ChannelDelete(GuildChannel),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SnowflakeID {
     pub id: u64,
 }
@@ -67,6 +67,7 @@ impl ToString for SnowflakeID {
         format!("{}", self.id)
     }
 }
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GuildCreate {
     pub id: SnowflakeID,
