@@ -158,15 +158,37 @@ impl DiscordAPI {
         //  let mut lowercase = source.to_ascii_lowercase();
         lazy_static! {
             static ref RE: Regex = Regex::new(r"[^\pN\p{Emoji}A-Za-z0-9\-]").unwrap();
+            static ref RE_HASH: Regex = Regex::new(r"#").unwrap();
             static ref RE_DUP: Regex = Regex::new(r"-+").unwrap();
             static ref RE_START: Regex = Regex::new(r"^-").unwrap();
             static ref RE_END: Regex = Regex::new(r"-$").unwrap();
         }
 
         let sanitized = RE.replace_all(source, "-").to_string();
-        let de_dup: String = RE_DUP.replace_all(&sanitized, "-").to_string();
+        let de_hash = RE_HASH.replace_all(&sanitized, "-").to_string();
+        let de_dup: String = RE_DUP.replace_all(&de_hash, "-").to_string();
         let trimmed_start: String = RE_START.replace_all(&de_dup, "").to_string();
         let trimmed_end: String = RE_END.replace_all(&trimmed_start, "").to_string();
-        trimmed_end.to_lowercase().replace("#", "")
+        trimmed_end.to_lowercase()
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::DiscordAPI;
+
+    #[test]
+    fn sanitize() {
+        let match_tests: Vec<(&str, &str)> = vec![
+            ("a", "a"),
+            ("b b", "b-b"),
+            ("-c", "c"),
+            ("--d--", "d"),
+            ("@#$a", "a"),
+            ("TB 🚀 🌕 b 🔥 L", "tb-🚀-🌕-b-🔥-l"),
+        ];
+        for t in match_tests {
+            let result = DiscordAPI::sanitize(t.0);
+            assert_eq!(t.1, result)
+        }
     }
 }
