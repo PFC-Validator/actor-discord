@@ -17,6 +17,7 @@ async fn main() -> Result<()> {
 
     let token = env::var("DISCORD_TOKEN")?;
     let url = env::var("DISCORD_URL")?;
+    let retries: usize = env::var("DISCORD_RETRIES").unwrap_or("4".into()).parse()?;
     let intents: GatewayIntents = GatewayIntents::GUILDS
          // | GatewayIntents::GUILD_MESSAGE_TYPING
         | GatewayIntents::DIRECT_MESSAGES
@@ -26,7 +27,7 @@ async fn main() -> Result<()> {
     log::info!("** Intents = {}", intents.bits);
 
     log::info!("attempting to create websocket");
-    let discord_api = DiscordAPI::create(&token, &url)?;
+    let discord_api = DiscordAPI::create(&token, &url, retries)?;
     // let mut connect = DiscordBot::create(&discord_api, intents).await?;
     log::info!("attempting to create actor");
 

@@ -12,8 +12,9 @@ async fn main() -> Result<()> {
 
     let token = env::var("DISCORD_TOKEN")?;
     let url = env::var("DISCORD_URL")?;
+    let retries: usize = env::var("DISCORD_RETRIES").unwrap_or("4".into()).parse()?;
 
-    let discord_api = DiscordAPI::create(&token, &url)?;
+    let discord_api = DiscordAPI::create(&token, &url, retries)?;
 
     let channels = discord_api.channels("839604684573638696".into()).await?;
     let mut foo = channels

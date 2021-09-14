@@ -23,22 +23,24 @@ pub struct DiscordAPI {
     pub client: Client,
     pub base_url: Url,
     pub token: String,
+    pub max_retries: usize,
 }
 impl DiscordAPI {
-    pub fn create(token: &str, connect_addr: &str) -> Result<DiscordAPI> {
+    pub fn create(token: &str, connect_addr: &str, max_retries: usize) -> Result<DiscordAPI> {
         let base_url: Url = Url::from_str(connect_addr)?.join(API_PREFIX)?;
         let client = Client::builder().finish();
         Ok(DiscordAPI {
             client,
             base_url,
             token: token.into(),
+            max_retries,
         })
     }
 
     pub async fn get<T: for<'de> Deserialize<'de>>(&self, url_suffix: &str) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
 
-        let mut retries = 4;
+        let mut retries = self.max_retries;
         while retries > 0 {
             log::debug!("Get URL={}", full_url.as_str());
             let response = self
@@ -61,7 +63,7 @@ impl DiscordAPI {
                 return Ok(ok_retryable.1.unwrap());
             }
             log::debug!("Retrying retries left:{}", retries);
-            retries = retries - 1;
+            retries -= 1;
         }
         Err(ActorDiscordError::RetryError.into())
     }
@@ -72,7 +74,7 @@ impl DiscordAPI {
     ) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
 
-        let mut retries = 2;
+        let mut retries = self.max_retries;
         while retries > 0 {
             log::debug!("Post URL={}", full_url.as_str());
             let arg_json = serde_json::to_string(&args)?;
@@ -96,7 +98,7 @@ impl DiscordAPI {
                 return Ok(ok_retryable.1.unwrap());
             }
             log::debug!("Retrying retries left:{}", retries);
-            retries = retries - 1;
+            retries -= 1;
         }
         Err(ActorDiscordError::RetryError.into())
     }
@@ -106,7 +108,7 @@ impl DiscordAPI {
     ) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
 
-        let mut retries = 2;
+        let mut retries = self.max_retries;
         while retries > 0 {
             log::debug!("Delete URL={}", full_url.as_str());
 
@@ -130,7 +132,7 @@ impl DiscordAPI {
                 return Ok(ok_retryable.1.unwrap());
             }
             log::debug!("Retrying retries left:{}", retries);
-            retries = retries - 1;
+            retries -= 1;
         }
         Err(ActorDiscordError::RetryError.into())
     }
@@ -141,7 +143,7 @@ impl DiscordAPI {
     ) -> anyhow::Result<T> {
         let full_url = self.base_url.join(url_suffix)?;
 
-        let mut retries = 2;
+        let mut retries = self.max_retries;
         while retries > 0 {
             log::debug!("Patch URL={}", full_url.as_str());
             let arg_json = serde_json::to_string(&args)?;
@@ -165,7 +167,7 @@ impl DiscordAPI {
                 return Ok(ok_retryable.1.unwrap());
             }
             log::debug!("Retrying retries left:{}", retries);
-            retries = retries - 1;
+            retries -= 1;
         }
         Err(ActorDiscordError::RetryError.into())
     }

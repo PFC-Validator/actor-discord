@@ -8,13 +8,15 @@ use anyhow::Result;
 pub struct ExampleDiscordActor {
     pub token: String,
     pub connect_addr: String,
+    pub max_retries: usize,
 }
 
 impl ExampleDiscordActor {
-    pub fn create(token: &str, connect_addr: &str) -> Result<Self> {
+    pub fn create(token: &str, connect_addr: &str, retries: usize) -> Result<Self> {
         Ok(ExampleDiscordActor {
             token: token.into(),
             connect_addr: connect_addr.into(),
+            max_retries: retries,
         })
     }
 }
@@ -36,7 +38,7 @@ impl Handler<Event> for ExampleDiscordActor {
         match msg {
             Event::INIT => {
                 log::info!("IN INIT");
-                match DiscordAPI::create(&self.token, &self.connect_addr) {
+                match DiscordAPI::create(&self.token, &self.connect_addr, self.max_retries) {
                     Ok(api) => {
                         async move {
                             match api.guild("839604684573638696".into()).await {
