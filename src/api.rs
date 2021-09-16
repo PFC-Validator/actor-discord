@@ -56,7 +56,10 @@ impl DiscordAPI {
                 .await
                 .map_err(|source| {
                     eprintln!("{:#?}", source);
-                    ActorDiscordError::ResponseError()
+                    ActorDiscordError::ResponseErrorMsg {
+                        url: full_url.to_string(),
+                        err: source.to_string(),
+                    }
                 })?;
             let ok_retryable = self.handle_response::<T>(response).await?;
             if ok_retryable.0 {
@@ -91,7 +94,10 @@ impl DiscordAPI {
                 .await
                 .map_err(|source| {
                     eprintln!("{:#?}", source);
-                    ActorDiscordError::ResponseError()
+                    ActorDiscordError::ResponseErrorMsg {
+                        url: full_url.to_string(),
+                        err: source.to_string(),
+                    }
                 })?;
             let ok_retryable = self.handle_response::<T>(response).await?;
             if ok_retryable.0 {
@@ -125,7 +131,10 @@ impl DiscordAPI {
                 .await
                 .map_err(|source| {
                     eprintln!("{:#?}", source);
-                    ActorDiscordError::ResponseError()
+                    ActorDiscordError::ResponseErrorMsg {
+                        url: full_url.to_string(),
+                        err: source.to_string(),
+                    }
                 })?;
             let ok_retryable = self.handle_response::<T>(response).await?;
             if ok_retryable.0 {
@@ -160,7 +169,10 @@ impl DiscordAPI {
                 .await
                 .map_err(|source| {
                     eprintln!("{:#?}", source);
-                    ActorDiscordError::ResponseError()
+                    ActorDiscordError::ResponseErrorMsg {
+                        url: full_url.to_string(),
+                        err: source.to_string(),
+                    }
                 })?;
             let ok_retryable = self.handle_response::<T>(response).await?;
             if ok_retryable.0 {
