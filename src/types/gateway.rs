@@ -10,6 +10,7 @@ pub struct GatewayReply {
 pub const GATEWAY: usize = 0;
 pub const HEARTBEAT: usize = 1;
 pub const IDENTIFY: usize = 2;
+pub const RECONNECT: usize = 7;
 pub const INVALID_SESSION: usize = 9;
 pub const HELLO: usize = 10;
 pub const ACK: usize = 11;

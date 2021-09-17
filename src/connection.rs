@@ -156,7 +156,10 @@ impl<'a> DiscordBot<'a> {
                         log::debug!("ACKED {}", String::from_utf8_lossy(&txt));
                     }
                     gateway::INVALID_SESSION => {
-                        log::info!("INVALID session {}", b.d.as_bool().unwrap_or(false));
+                        log::warn!("INVALID session {}", b.d.as_bool().unwrap_or(false));
+                    }
+                    gateway::RECONNECT => {
+                        log::warn!("Reconnect requested {}", String::from_utf8_lossy(&txt));
                     }
                     _ => {
                         log::error!("Unknown Op Code: {}", b.op)
