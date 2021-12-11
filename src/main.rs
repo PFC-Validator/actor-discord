@@ -1,9 +1,9 @@
-use actix::Actor;
+//use actix::Actor;
 //use actix_rt::Runtime;
-use actor_discord::discord::ExampleDiscordActor;
-use actor_discord::types::events::{ChannelType, GuildChannelCreate};
+// use actor_discord::discord::ExampleDiscordActor;
+use actor_discord::types::events::ChannelType;
 use actor_discord::DiscordAPI;
-use actor_discord::DiscordBot;
+//use actor_discord::DiscordBot;
 use actor_discord::GatewayIntents;
 use anyhow::Result;
 use dotenv::dotenv;

@@ -3,21 +3,17 @@ use crate::types::events::{
 };
 use crate::types::gateway::{GatewayHello, GatewayIdentify, GatewayMessage, GatewayReply};
 use crate::{types::gateway, DiscordAPI, GatewayIntents};
-//use crate::{NAME, VERSION};
+use actix_broker::{Broker, SystemBroker};
 use actix_http::ws::Frame;
 use anyhow::Result;
 use awc::ws::Message;
-//use awc::{ws, Client, ClientBuilder};
 use awc::Client;
 use futures::StreamExt;
 use futures_util::sink::SinkExt as _;
-//use futures_util::{sink::SinkExt as _, stream::StreamExt as _};
-use actix_broker::{Broker, SystemBroker};
 use std::str::FromStr;
+#[allow(unused_imports)]
 use std::sync::Arc;
 use std::time::Duration;
-//use tokio::sync::mpsc;
-//use tokio::sync::watch;
 use tokio::time::Interval;
 use url::Url;
 const GATEWAY: &str = "gateway";
@@ -31,19 +27,13 @@ pub struct DiscordBot<'a> {
     pub interval: Interval,
 }
 impl<'a> DiscordBot<'a> {
+    pub fn get_client() -> Client {
+        awc::Client::builder()
+            .max_http_version(awc::http::Version::HTTP_11)
+            .finish()
+    }
     pub async fn create(api: &'a DiscordAPI, intents: GatewayIntents) -> Result<DiscordBot<'a>> {
-        let mut config = rustls::ClientConfig::new();
-        config
-            .root_store
-            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-
-        let protos = vec![b"http/1.1".to_vec()];
-        config.set_protocols(&protos);
-
-        let rc_config = Arc::new(config);
-        let client = Client::builder()
-            .connector(awc::Connector::new().rustls(rc_config))
-            .finish();
+        let client = Self::get_client();
 
         //   let base_url: Url = Url::from_str(connect_addr)?.join(API_PREFIX)?;
 
@@ -228,5 +218,15 @@ impl<'a> DiscordBot<'a> {
         }
 
         Ok(())
+    }
+}
+#[cfg(test)]
+mod tests {
+
+    use crate::DiscordBot;
+
+    #[tokio::test]
+    async fn connect() {
+        let _client = DiscordBot::get_client();
     }
 }

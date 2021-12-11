@@ -1,6 +1,6 @@
 [package]
 name = "actor-discord"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2018"
 license = "Apache-2.0"
 authors = ["PFC-Validator <PFC-Validator@protonmail.com>"]
@@ -12,9 +12,10 @@ categories = ["api-bindings"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default= ["rust-tls"]
-native-tls=["tokio-tungstenite/native-tls","tokio-tungstenite/tokio-native-tls","actix-http/openssl","tokio-tungstenite/rustls-tls-native-roots"]
-rust-tls=["tokio-tungstenite/tokio-rustls","tokio-tungstenite/rustls","tokio-tungstenite/rustls-tls-webpki-roots", "actix-http/rustls"]
+default= ["native-tls"]
+#default= ["rust-tls"]
+native-tls=["tokio-tungstenite/native-tls","tokio-tungstenite/tokio-native-tls","actix-http/openssl","tokio-tungstenite/rustls-tls-native-roots","awc/openssl","awc/tls-openssl", "actix-http/openssl"]
+rust-tls=["tokio-tungstenite/tokio-rustls","tokio-tungstenite/rustls","tokio-tungstenite/rustls-tls-webpki-roots", "actix-http/rustls","awc/rustls","awc/tls-rustls"]
 [dependencies]
 actix="0.12.0"
 # actix-codec = "0.4.0"
@@ -31,13 +32,17 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_repr="0.1.7"
 url="2"
-actix-http={version = "3.0.0-beta.9", features=["rustls"]}
-awc={ version="3.0.0-beta.7", features=["rustls","tls-rustls"]}
+#actix-http={version = "3.0.0-beta.9", features=["rustls"]}
+actix-http={version = "3.0.0-beta.14"} #, features=["rustls"]}
+#awc={ version="3.0.0-beta.7", features=["rustls","tls-rustls"]}
+awc={ version="3.0.0-beta.13"}#, features=["rustls","tls-rustls"]}
 actix-broker = "0.4.1"
-rustls="0.19.1"
+#rustls="0.20.2"
 #webpki = "0.21"
-webpki-roots="0.21.0"
+#webpki-roots="0.21.0"
 futures-util = "0.3.17"
 bitflags = "1.1"
 regex="1.5.4"
 lazy_static = "1.4.0"
+#actix-tls = "3.0.0-rc.1"
+#openssl-sys = "0.9.71"
