@@ -1,6 +1,6 @@
 [package]
 name = "actor-discord"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2018"
 license = "Apache-2.0"
 authors = ["PFC-Validator <PFC-Validator@protonmail.com>"]
@@ -13,14 +13,14 @@ categories = ["api-bindings"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default= ["rust-tls"]
-native-tls=["tokio-tungstenite/native-tls","tokio-tungstenite/tokio-native-tls","actix-http/openssl"]
-rust-tls=["tokio-tungstenite/tokio-rustls","tokio-tungstenite/rustls-tls","tokio-tungstenite/rustls", "actix-http/rustls"]
+native-tls=["tokio-tungstenite/native-tls","tokio-tungstenite/tokio-native-tls","actix-http/openssl","tokio-tungstenite/rustls-tls-native-roots"]
+rust-tls=["tokio-tungstenite/tokio-rustls","tokio-tungstenite/rustls","tokio-tungstenite/rustls-tls-webpki-roots", "actix-http/rustls"]
 [dependencies]
 actix="0.12.0"
 # actix-codec = "0.4.0"
 actix-rt="2.2.0"
-tokio-tungstenite = { version = "0.15.0"} #, features = ["connect", "stream"], default-features = true }
-tokio = { version = "1.10", features = ["full"] }
+tokio-tungstenite = { version = "0.16.1"} #, features = ["connect", "stream"], default-features = true }
+tokio = { version = "1.14.0", features = ["full"] }
 log = "0.4.14"
 dotenv="0.15.0"
 env_logger = "0.9.0"
