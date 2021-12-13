@@ -19,11 +19,11 @@ async fn main() -> Result<()> {
     let url = env::var("DISCORD_URL")?;
     let retries: usize = env::var("DISCORD_RETRIES").unwrap_or("4".into()).parse()?;
     let intents: GatewayIntents = GatewayIntents::GUILDS
-         // | GatewayIntents::GUILD_MESSAGE_TYPING
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::GUILD_MESSAGE_REACTIONS
-        | GatewayIntents::DIRECT_MESSAGE_REACTIONS;
+            // | GatewayIntents::GUILD_MESSAGE_TYPING
+            | GatewayIntents::DIRECT_MESSAGES
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+            | GatewayIntents::DIRECT_MESSAGE_REACTIONS;
     log::info!("** Intents = {}", intents.bits);
 
     log::info!("attempting to create websocket");

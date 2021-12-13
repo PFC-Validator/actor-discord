@@ -196,15 +196,19 @@ impl<'a> DiscordBot<'a> {
             tokio::select! {
                 websocket = connection.next() => {
                     log::debug!("WS has a message");
-                    let response = websocket.unwrap().unwrap();
-                    let (continu,message_send) = self.handle_ws(response).await?;
-                    if let Some(to_be_sent) = message_send {
-                         let _result =  connection.send(to_be_sent).await?;
-                    }
-                    if !continu {
+                    if let Some(websocket_r) = websocket {
+                        let response = websocket_r.unwrap();
+                        let (continu,message_send) = self.handle_ws(response).await?;
+                        if let Some(to_be_sent) = message_send {
+                             let _result =  connection.send(to_be_sent).await?;
+                        }
+                        if !continu {
+                            break
+                        }
+                    } else {
+                        log::warn!("WS has no message");
                         break
                     }
-
                 }
                 _ =  self.interval.tick() => {
                     let heartbeat = serde_json::to_value(self.sequence_number)?;

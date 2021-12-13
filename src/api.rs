@@ -28,6 +28,7 @@ pub struct DiscordAPI {
 impl DiscordAPI {
     pub fn create(token: &str, connect_addr: &str, max_retries: usize) -> Result<DiscordAPI> {
         let base_url: Url = Url::from_str(connect_addr)?.join(API_PREFIX)?;
+
         let client = Client::builder().finish();
         Ok(DiscordAPI {
             client,
