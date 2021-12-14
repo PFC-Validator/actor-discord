@@ -11,12 +11,13 @@ async fn main() -> Result<()> {
     log::info!("Starting");
 
     let token = env::var("DISCORD_TOKEN")?;
+    let guild_id = env::var("DISCORD_GUILD_ID")?;
     let url = env::var("DISCORD_URL")?;
     let retries: usize = env::var("DISCORD_RETRIES").unwrap_or("4".into()).parse()?;
 
     let discord_api = DiscordAPI::create(&token, &url, retries)?;
 
-    let channels = discord_api.channels("839604684573638696".into()).await?;
+    let channels = discord_api.channels(guild_id.as_str().into()).await?;
     let mut foo = channels
         .iter()
         .filter(|c| {
