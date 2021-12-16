@@ -8,6 +8,7 @@ use actor_discord::GatewayIntents;
 use anyhow::Result;
 use dotenv::dotenv;
 use std::env;
+use std::env::args;
 
 #[actix_rt::main]
 async fn main() -> Result<()> {
@@ -15,7 +16,10 @@ async fn main() -> Result<()> {
     env_logger::init();
     log::info!("Starting");
 
+    let channel_name = args().nth(1).expect("Please provide a channel name");
     let token = env::var("DISCORD_TOKEN")?;
+    let guild_id = env::var("DISCORD_GUILD_ID")?;
+
     let url = env::var("DISCORD_URL")?;
     let retries: usize = env::var("DISCORD_RETRIES").unwrap_or("4".into()).parse()?;
     let intents: GatewayIntents = GatewayIntents::GUILDS
@@ -37,10 +41,12 @@ async fn main() -> Result<()> {
     //let _actor_addr = actor.start();
     log::info!("creating threads");
 
-    let channels = discord_api.channels("839604684573638696".into()).await?;
+    let channels = discord_api.channels(guild_id.as_str().into()).await?;
     let foo = channels
         .iter()
-        .filter(|c| c.parent_id.is_none() && c.u_type == ChannelType::GuildText)
+        .filter(|c| {
+            c.parent_id.is_none() && c.u_type == ChannelType::GuildText && c.name == channel_name
+        })
         .collect::<Vec<_>>();
     let bb = futures::future::join_all(foo.iter().map(|c| discord_api.delete_channel(c.id))).await;
     bb.iter().for_each(|cr| match cr {
